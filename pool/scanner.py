@@ -102,11 +102,7 @@ class PortScanner:
             return self._scan_result
         scan_result = {}
 
-        try:
-            dom = ET.fromstring(self._stdout)
-        except Exception as e:
-            print(e)
-            return
+        dom = ET.fromstring(self._stdout)
         scan_result['nmap'] = {
             'command_line': dom.get('args'),
             'scaninfo': {},
