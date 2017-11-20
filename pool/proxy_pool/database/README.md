@@ -7,12 +7,15 @@
 - mode(int) 0: ip  1: host  2: ip + *
 - insert_at
 - update_at
-- cost_second (int) complete it cost
+- is_deleted (boolean)
+- speed (int) complete it cost
 
 ### DB: IPInfo
 
 - ip String( max 16)
-- port_sum (int)  port sum 
+- port_sum (int)  port sum
+- speed (int) 
+- is_deleted (boolean)
 - country(null)
 - province(null)
 - city(null)
@@ -32,6 +35,7 @@
 - is_checked(boolean)
 - checked_state (int)(0: default, 1: Transparent Proxy 2:Anonymous Proxy 3:High Anonymous Proxy 4:Need Auth Proxy) 
 - protocol (int) (0:default 1:http 2:https 3:http+https 4:socks)
+- speed (int)
 - insert_at
 - update_at
 
