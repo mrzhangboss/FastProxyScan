@@ -5,12 +5,13 @@
 @date: 2017/11/19
 
 """
+import os
 import logging
-import psutil
 from subprocess import PIPE
-from io import BytesIO
+from collections import Iterable
 from xml.etree import ElementTree as ET
 from datetime import datetime
+import psutil
 
 
 class PortScanner:
@@ -20,7 +21,7 @@ class PortScanner:
         self._port = port
         self._stdout = None
         self._exclude = exclude
-        assert self._exclude and isinstance(self._exclude, list)
+        assert self._exclude is None or (self._exclude and isinstance(self._exclude, Iterable))
 
     def check_finished(self):
         p = self._process
@@ -35,8 +36,9 @@ class PortScanner:
         return self.check_finished()
 
     def scan(self):
+        not_root = os.getuid() != 0
         exclude = ['--exclude', *self._exclude] if self._exclude else []
-        commands = ['sudo', 'nmap', '-oX', '-', '-sS', '-T4',
+        commands = ['sudo'] * not_root +  ['nmap', '-oX', '-', '-sS', '-T4',
                     '-p', str(self._port) if self._port else '1-65535', *exclude, self._host]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
@@ -311,7 +313,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     import time
 
-    scanner = PortScanner('124.89.33.59', '1-1000', ['192.168.1.1'])
+    scanner = PortScanner('124.89.33.59', '1-1000', ('192.168.1.1'))
     scanner.scan()
     for i in range(1000):
         if scanner.is_running:
