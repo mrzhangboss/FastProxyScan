@@ -37,6 +37,8 @@ class PortScanner:
 
     def scan(self):
         not_root = os.getuid() != 0
+        if not_root:
+            print("Please check if you have sudo premission")
         exclude = ['--exclude', *self._exclude] if self._exclude else []
         commands = ['sudo'] * not_root +  ['nmap', '-oX', '-', '-sS', '-T4',
                     '-p', str(self._port) if self._port else '1-65535', *exclude, self._host]
