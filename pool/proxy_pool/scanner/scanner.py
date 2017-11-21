@@ -56,11 +56,12 @@ class PortScanner:
         if not PORT_SCANNER_ROOT_WARNED and not_root != 0:
             print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.ENDC)
             PORT_SCANNER_ROOT_WARNED = True
+        hosts = self._host if isinstance(self._host, Iterable) else [self._host]
         exclude = ['--exclude', *self._exclude] if self._exclude else []
         commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
                                           '-p %s' % str(self._port) if self._port else '-F',
                                           '--host-timeout', str(self._host_timeout),
-                                          *exclude, self._host]
+                                          *exclude, *hosts]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
     @property
@@ -334,7 +335,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     import time
 
-    scanner = PortScanner('124.89.33.59', None, ('192.168.1.1'))
+    scanner = PortScanner(['124.89.33.59', '115.159.146.115'], '22', ('192.168.1.1',))
     scanner.scan()
     for i in range(1000):
         if scanner.is_running:
