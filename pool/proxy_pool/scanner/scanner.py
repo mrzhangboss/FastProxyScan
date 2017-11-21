@@ -25,6 +25,9 @@ class BColors:
     UNDERLINE = '\033[4m'
 
 
+PORT_SCANNER_ROOT_WARNED = False
+
+
 class PortScanner:
     def __init__(self, host, port=None, exclude=None, host_timeout=360):
         self._host = host
@@ -49,12 +52,14 @@ class PortScanner:
 
     def scan(self):
         not_root = os.getuid() != 0
-        if not_root:
+        global PORT_SCANNER_ROOT_WARNED
+        if not PORT_SCANNER_ROOT_WARNED and not_root != 0:
             print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.ENDC)
+            PORT_SCANNER_ROOT_WARNED = True
         exclude = ['--exclude', *self._exclude] if self._exclude else []
         commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
                                           '-p %s' % str(self._port) if self._port else '-F',
-                                          '--host-timeout',  str(self._host_timeout),
+                                          '--host-timeout', str(self._host_timeout),
                                           *exclude, self._host]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
