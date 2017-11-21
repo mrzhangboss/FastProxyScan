@@ -67,6 +67,14 @@ class Command(BaseCommand):
                     elif tasks.empty():
                         print('all scan over')
                         break
+                    else: # left in stacks
+                        scanner = tasks.get()
+                        if scanner.is_running:
+                            tasks.put(scanner)
+                        else:
+                            save_result(scanner._host, scanner.result)
+                        time.sleep(0.5)
+
                 if tasks.full():
                     while True:
                         scanner = tasks.get()
