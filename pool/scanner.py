@@ -14,13 +14,25 @@ from datetime import datetime
 import psutil
 
 
+class BColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 class PortScanner:
-    def __init__(self, host, port=None, exclude=None):
+    def __init__(self, host, port=None, exclude=None, host_timeout=360):
         self._host = host
         self._process = None
         self._port = port
         self._stdout = None
         self._exclude = exclude
+        self._host_timeout = host_timeout
         assert self._exclude is None or (self._exclude and isinstance(self._exclude, Iterable))
 
     def check_finished(self):
@@ -38,10 +50,12 @@ class PortScanner:
     def scan(self):
         not_root = os.getuid() != 0
         if not_root:
-            print("Please check if you have sudo premission")
+            print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.ENDC)
         exclude = ['--exclude', *self._exclude] if self._exclude else []
-        commands = ['sudo'] * not_root +  ['nmap', '-oX', '-', '-sS', '-T4',
-                    '-p', str(self._port) if self._port else '1-65535', *exclude, self._host]
+        commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
+                                          '-p %s' % str(self._port) if self._port else '-F',
+                                          '--host-timeout',  str(self._host_timeout),
+                                          *exclude, self._host]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
     @property
@@ -315,13 +329,15 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     import time
 
-    scanner = PortScanner('124.89.33.59', '1-1000', ('192.168.1.1'))
+    scanner = PortScanner('124.89.33.59', None, ('192.168.1.1'))
     scanner.scan()
     for i in range(1000):
         if scanner.is_running:
             time.sleep(2)
             print(time.time())
         else:
+            from pprint import pprint
+
             # logging.debug(scanner._stdout)
-            print(scanner.result)
+            pprint(scanner.result)
             break
