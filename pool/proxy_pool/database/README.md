@@ -33,7 +33,7 @@
 - state (int) nmap scan state(open, closed, filtered, unfiltered, open|filtered, closed|filtered) 
 - is_proxy (boolean)
 - is_checked(boolean)
-- checked_state (int)(0: default, 1: Transparent Proxy 2:Anonymous Proxy 3:High Anonymous Proxy 4:Need Auth Proxy) 
+- checked_state (int)(0: default, 1: Transparent Proxy 2:Anonymous Proxy 3:High Anonymous Proxy 4:Need Auth Proxy 5: Mitm Proxy (middle man attack proxy)) 
 - protocol (int) (0:default 1:http 2:https 3:http+https 4:socks)
 - speed (int)
 - insert_at

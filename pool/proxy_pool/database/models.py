@@ -62,6 +62,7 @@ PROXY_CHECK_STATE = [
     (2, 'AnonymousProxy'),
     (3, 'HighAnonymousProxy'),
     (4, 'NeedAuthProxy'),
+    (5, 'MitmProxy')
 ]
 
 PROXY_PROTOCOL = [
