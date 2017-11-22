@@ -30,6 +30,13 @@ PORT_SCANNER_ROOT_WARNED = False
 
 class PortScanner:
     def __init__(self, host, port=None, exclude=None, host_timeout=360):
+        """
+
+        :param host: host can be list or str or domain like: ['192.168.1.1', '192.168.1.12'] or '192.168.1.*' or 'www.baidu.com'
+        :param port:
+        :param exclude:
+        :param host_timeout:
+        """
         self._host = host
         self._process = None
         self._port = port
