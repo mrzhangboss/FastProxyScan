@@ -16,6 +16,7 @@ from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyErro
 from scanner.scanner import PortScanner
 
 BASE_TIMEOUT = 60
+FAST_SCAN_TIMEOUT = 10
 SEMAPHORE = asyncio.Semaphore(1000)
 
 
@@ -83,10 +84,10 @@ async def request(url, method='head', proxy=None, timeout=BASE_TIMEOUT, verify_s
         return rt, speed
 
 
-async def check_proxy_type(check_ip_url, proxy_url, base_ip):
-    res = await request(url=check_ip_url, method='get', proxy=proxy_url, timeout=360)
+async def check_proxy_type(check_ip_url, proxy_url, base_ip, timeout=60):
+    res = await request(url=check_ip_url, method='get', proxy=proxy_url, timeout=timeout)
     if isinstance(res, int):
-        print('checked', proxy_url, 'error', 'please check check ip url', check_ip_url)
+        logging.debug('checked', proxy_url, 'meet error', 'return Default')
         return ProxyCheckedState.Default
     else:
         header, _ = res
@@ -136,7 +137,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                     if res == HTTPError.Timeout:
                         result[ip]['is_proxy'] = True
                         result[ip]['speed'] = BASE_TIMEOUT * 100
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip)
+                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
                     else:
                         result[ip]['is_proxy'] = False
                     continue
@@ -157,10 +158,10 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                             result[ip]['protocol'] = ProxyProtocol.http_https
                     elif res == HTTPError.Timeout:
                         result[ip]['protocol'] = ProxyProtocol.http_https
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip)
+                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
                     else:
                         result[ip]['protocol'] = ProxyProtocol.http
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip)
+                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
 
                 else:
                     result[ip]['protocol'] = ProxyProtocol.http_https
@@ -172,6 +173,6 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(check_proxy(['106.39.179.169'],
+    loop.run_until_complete(check_proxy(['180.169.57.100:3389'],
                                         80, '182.96.183.104', 'http://115.159.146.115/ip'))
 
