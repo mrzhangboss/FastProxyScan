@@ -12,7 +12,7 @@ import warnings
 import asyncio
 from pprint import pprint
 from aiohttp import ClientSession, TCPConnector
-from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyError
+from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyError, ClientResponseError
 from scanner.scanner import PortScanner
 
 BASE_TIMEOUT = 60
@@ -75,7 +75,7 @@ async def request(url, method='head', proxy=None, timeout=BASE_TIMEOUT, verify_s
     except asyncio.TimeoutError as e:
         logging.debug("{} :{}".format(str(type(e)), e))
         return HTTPError.Timeout
-    except (ClientHttpProxyError, ClientConnectionError) as e:
+    except (ClientHttpProxyError, ClientConnectionError, ClientResponseError) as e:
         if str(e).find('CERTIFICATE_VERIFY_FAILED') > 0:
             return HTTPError.CertificateError
         logging.debug("{} :{}".format(str(type(e)), e))
@@ -134,6 +134,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                 res = await request(url='http://www.baidu.com', proxy=proxy_url)
                 logging.debug('http response is %s' % str(res))
                 if isinstance(res, int):
+                    # TODO: check http is block but https is OK
                     if res == HTTPError.Timeout:
                         result[ip]['is_proxy'] = True
                         result[ip]['speed'] = BASE_TIMEOUT * 100
