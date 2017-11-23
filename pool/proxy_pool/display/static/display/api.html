@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>API文档</title>
+    <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap-theme.css">
+    <script src="/static/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+<a href="https://github.com/mrzhangboss/FastProxyScan"><img style="position: absolute; top: 0; right: 0; border: 0;"
+                                      src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67"
+                                      alt="Fork me on GitHub"
+                                      data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+<ul class="nav nav-pills nav-justified">
+    <li ><a href="/display">首页</a></li>
+    <li><a href="/static/display/about.html">本站介绍</a></li>
+    <li class="active"><a href="#">API接口</a></li>
+</ul>
+
+<div class="page-header">
+    <h1>API文档说明
+        <small>Django Cache</small>
+    </h1>
+</div>
+
+<p>使用Django的缓存技术，将最新的100个可用代理返回，每20分钟更新一次</p>
+<h4>接口详情</h4>
+
+<dl class="dl-horizontal">
+  <dt>URL</dt>
+  <dd><code>/display/api</code></dd>
+    <dt>方式</dt>
+  <dd><code>GET</code></dd>
+
+    <dt>返回</dt>
+  <dd><code>Json</code></dd>
+
+    <dt>字段介绍</dt>
+  <dd><pre>
+      ip： ip地址
+      port： 端口
+      protocol: 协议（http|https|http+https|socks)
+      speed: 速度(秒）
+      checked_state: 代理类型(未知, 'Default'),(透明代理, 'TransparentProxy'),(匿名代理, 'AnonymousProxy'),(高匿代理, 'HighAnonymousProxy'),(需要账号密码代理, 'NeedAuthProxy'),(中间人代理, 'MitmProxy'))
+      insert_at: 入库时间
+      update_at: 更新时间
+  </pre></dd>
+</dl>
+
+</body>
+</html>

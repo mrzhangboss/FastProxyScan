@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>快速代理</title>
+    <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap-theme.css">
+    <script src="/static/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+<a href="https://github.com/mrzhangboss/FastProxyScan"><img style="position: absolute; top: 0; right: 0; border: 0;"
+                                      src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67"
+                                      alt="Fork me on GitHub"
+                                      data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+
+<ul class="nav nav-pills nav-justified">
+    <li class="active"><a href="#">首页</a></li>
+    <li><a href="/static/display/about.html">本站介绍</a></li>
+    <li><a href="/static/display/api.html">API接口</a></li>
+</ul>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        本站基于FastProxyScan搭建的DEMO，如果对本项目感兴趣可点击右边Fork me
+    </div>
+    <div class="panel-footer">当前可用代理{{ total }}</div>
+</div>
+
+<table class="table table-striped">
+    <caption>可用代理</caption>
+    <thead>
+    <tr>
+        <th>ip</th>
+        <th>port</th>
+        <th>协议</th>
+        <th>类型</th>
+        <th>响应时间</th>
+        <th>入库时间</th>
+        <th>更新时间</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for p in proxies %}
+        <tr>
+            <td>{{ p.ip }}</td>
+            <td>{{ p.port }}</td>
+            <td>{{ p.protocol }}</td>
+            <td>{{ p.checked_state }}</td>
+            <td>{{ p.speed }}秒</td>
+            <td>{{ p.insert_at }}</td>
+            <td>{{ p.update_at }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<ul class="pagination">
+    {% for p in pages %}
+        {% if p.page == page %}
+            <li class="active"><a href="/display/?page={{ p.page }}">{{ p.text }}</a></li>
+
+        {% else %}
+
+            <li><a href="/display/?page={{ p.page }}">{{ p.text }}</a></li>
+
+        {% endif %}
+    {% endfor %}
+</ul>
+
+</body>
+</html>
