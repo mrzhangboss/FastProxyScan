@@ -7,6 +7,7 @@
 """
 import time
 from queue import Queue
+from pprint import pprint
 from django.core.management import BaseCommand
 from database.models import HostInfo, IPInfo, Proxy, PROXY_STATE
 from scanner.scanner import PortScanner
@@ -15,6 +16,7 @@ from scanner.scanner import PortScanner
 def save_result(host, result):
     if not result['scan']:
         print('no proxy scan', host)
+        return
     state = {v: k for k, v in PROXY_STATE}
     scan_stats = result['nmap']['scanstats']
     host_info = HostInfo.objects.get(host=host)
