@@ -24,4 +24,4 @@ class ProxyAdmin(admin.ModelAdmin):
     list_display = (
         '__str__', 'state', 'is_checked', 'is_proxy', 'checked_state', 'protocol', 'speed', 'insert_at',
         'update_at')
-    list_filter = ('port', 'is_checked', 'is_proxy', 'checked_state', 'protocol', 'insert_at', 'update_at')
+    list_filter = ('state', 'checked_state', 'is_checked', 'is_proxy', 'checked_state', 'protocol', 'insert_at', 'update_at')

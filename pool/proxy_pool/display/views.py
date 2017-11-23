@@ -2,6 +2,7 @@ from math import ceil
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
+from django.utils.timezone import localtime
 from database.models import Proxy, PROXY_STATE, PROXY_PROTOCOL, PROXY_CHECK_STATE
 
 proxy_state = dict(PROXY_STATE)
@@ -18,8 +19,8 @@ def get_latest_proxies(begin, end):
             'protocol': proxy_protocol[p.protocol],
             'speed': p.speed / 100.0,
             'checked_state': proxy_check_state[p.checked_state],
-            'insert_at': p.insert_at.strftime('%Y-%m-%d %H-%M'),
-            'update_at': p.update_at.strftime('%Y-%m-%d %H-%M')
+            'insert_at': localtime(p.insert_at).strftime('%Y-%m-%d %H-%M'),
+            'update_at': localtime(p.update_at).strftime('%Y-%m-%d %H-%M')
         }
         proxies.append(proxy)
     return proxies
