@@ -1,0 +1,5 @@
+aiohttp
+psutil
+django
+requests
+python-dotenv
