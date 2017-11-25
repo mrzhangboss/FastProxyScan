@@ -63,15 +63,15 @@ def save_result(host, result, bigger):
     host_info.save()
 
 
-async def host_scan(semaphore, host, bigger=15, exclude=None):
+async def host_scan(semaphore, host, port=None, bigger=15, exclude=None, timeout=360, sleep_time=0.5, origin=None):
     async with semaphore:
-        scanner = PortScanner(host, exclude=exclude)
+        scanner = PortScanner(host, port=port, exclude=exclude, host_timeout=timeout)
         scanner.scan()
         print(host, 'begin scan', datetime.now())
         while scanner.is_running:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(sleep_time)
         print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
-        save_result(host, scanner.result, bigger)
+        save_result(origin if origin else host, scanner.result, bigger)
 
 
 def get_host_domain(ip):
@@ -79,6 +79,11 @@ def get_host_domain(ip):
     domain = domain.strip()
     assert DOMAIN_FMT.search(domain)
     return domain
+
+
+def get_domain_ips(ip):
+    domain = get_host_domain(ip)[:-2]
+    return (y for y in ('%s.%d' % (domain, x) for x in range(256)) if y != ip)
 
 
 class Command(BaseCommand):
@@ -100,11 +105,14 @@ class Command(BaseCommand):
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
                 tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
+                # continue
                 if host_info.port_sum > bigger:
                     domain = get_host_domain(host_info.host)
                     if not HostInfo.objects.filter(host=domain).exists() or is_force_run:
-                        tasks.append(
-                            asyncio.ensure_future(host_scan(semaphore, domain, exclude=host_info.host, bigger=bigger)))
+                        ips = get_domain_ips(host_info.host)
+                        # if bigger than bigger // 2 , we add it to our host to scan
+                        for ip in ips:
+                            tasks.append(asyncio.ensure_future(host_scan(semaphore, ip, bigger=bigger // 2, origin=domain)))
 
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=1).all():  # for domain scan
                 tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
