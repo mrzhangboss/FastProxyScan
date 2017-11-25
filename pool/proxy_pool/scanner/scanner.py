@@ -64,8 +64,11 @@ class PortScanner:
             print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.END)
             PORT_SCANNER_ROOT_WARNED = True
         hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
-        excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude, str) else [self._exclude]
-        exclude = ['--exclude', *excludes]
+        if self._exclude:
+            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude, str) else [self._exclude]
+            exclude = ['--exclude', *excludes]
+        else:
+            exclude = []
         commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
                                           '-p %s' % str(self._port) if self._port else '-F',
                                           '--host-timeout', str(self._host_timeout),
