@@ -17,16 +17,18 @@ from scanner.scanner import PortScanner, BColors
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 
 
-def save_result(host, result):
-    if not result['scan']:
+def save_result(host, result, bigger):
+    defaults = {'mode': 2, 'is_deleted': True} if DOMAIN_FMT.search(host.strip()) else None
+    host_info, created = HostInfo.objects.get_or_create(host=host, defaults=defaults)
+    if created:  # set deleted is True, not scan next time
+        print(BColors.BOLD, 'add domain', host_info.host, BColors.END)
+    if not result['scan']:  # delete host when it no port open
         print('no proxy scan', host)
+        host_info.is_deleted = True
+        host_info.save()
         return
     state = {v: k for k, v in PROXY_STATE}
     scan_stats = result['nmap']['scanstats']
-    defaults = {'mode': 2} if DOMAIN_FMT.search(host.strip()) else None
-    host_info, created = HostInfo.objects.update_or_create(host=host, defaults=defaults)
-    if created:
-        print(BColors.BOLD, 'add domain', host_info.host, BColors.END)
     host_speed = (int(scan_stats['end']) - int(scan_stats['start'])) * 100
     ip_speed = host_speed // int(scan_stats['totalhosts'])
     host_port_sum = 0
@@ -40,6 +42,12 @@ def save_result(host, result):
         if created:
             print('insert one ip', ip)
         if ip_port_sum > 0:
+            if ip_port_sum >= bigger:
+                new_host, created = HostInfo.objects.update_or_create(host=ip_info.ip,
+                                                                      defaults={'port_sum': ip_port_sum})
+                if created:
+                    print('insert one host: %s port sum bigger than' % ip_info.ip, bigger)
+
             for port in result['scan'][ip]['tcp']:
                 p = result['scan'][ip]['tcp'][port]
                 proxy, created = Proxy.objects.update_or_create(host=host_info,
@@ -55,7 +63,7 @@ def save_result(host, result):
     host_info.save()
 
 
-async def host_scan(semaphore, host, exclude=None):
+async def host_scan(semaphore, host, bigger=15, exclude=None):
     async with semaphore:
         scanner = PortScanner(host, exclude=exclude)
         scanner.scan()
@@ -63,36 +71,42 @@ async def host_scan(semaphore, host, exclude=None):
         while scanner.is_running:
             await asyncio.sleep(0.5)
         print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
-        save_result(host, scanner.result)
+        save_result(host, scanner.result, bigger)
 
 
 def get_host_domain(ip):
     domain = ip[::-1].split('.', 1)[1][::-1] + '.*'
-    assert DOMAIN_FMT.search(domain.strip())
+    domain = domain.strip()
+    assert DOMAIN_FMT.search(domain)
     return domain
 
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--start', action='store_true')
+        parser.add_argument('--force-run', action='store_true', dest='force', help="force run domain scan")
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
-        parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=20, type=int, help='if ip port sum bigger than it, will scan it domain')
+        parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=15, type=int,
+                            help='if ip port sum bigger than it, will scan it domain')
 
     def handle(self, *args, **options):
         start = time.time()
         loop = asyncio.get_event_loop()
         semaphore = asyncio.Semaphore(options['max_size'])
         bigger = options['bigger']
+        is_force_run = options['force']
         if options['start']:
             tasks = []
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
-                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host)))
+                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
                 if host_info.port_sum > bigger:
                     domain = get_host_domain(host_info.host)
-                    tasks.append(asyncio.ensure_future(host_scan(semaphore, domain, exclude=host_info.host)))
+                    if not HostInfo.objects.filter(host=domain).exists() or is_force_run:
+                        tasks.append(
+                            asyncio.ensure_future(host_scan(semaphore, domain, exclude=host_info.host, bigger=bigger)))
 
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=1).all():  # for domain scan
-                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host)))
+                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
         loop.run_until_complete(asyncio.wait(tasks))
         print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')
