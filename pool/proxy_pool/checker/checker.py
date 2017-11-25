@@ -135,12 +135,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                 logging.debug('http response is %s' % str(res))
                 if isinstance(res, int):
                     # TODO: check http is block but https is OK
-                    if res == HTTPError.Timeout:
-                        result[ip]['is_proxy'] = True
-                        result[ip]['speed'] = BASE_TIMEOUT * 100
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
-                    else:
-                        result[ip]['is_proxy'] = False
+                    result[ip]['is_proxy'] = False
                     continue
                 _, speed = res
                 result[ip]['speed'] = speed  # use http request speed
