@@ -5,12 +5,16 @@
 @date: 2017/11/21
 
 """
+import re
+import asyncio
 import time
-from queue import Queue
+from datetime import datetime
 from pprint import pprint
 from django.core.management import BaseCommand
 from database.models import HostInfo, IPInfo, Proxy, PROXY_STATE
-from scanner.scanner import PortScanner
+from scanner.scanner import PortScanner, BColors
+
+DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 
 
 def save_result(host, result):
@@ -19,7 +23,10 @@ def save_result(host, result):
         return
     state = {v: k for k, v in PROXY_STATE}
     scan_stats = result['nmap']['scanstats']
-    host_info = HostInfo.objects.get(host=host)
+    defaults = {'mode': 2} if DOMAIN_FMT.search(host.strip()) else None
+    host_info, created = HostInfo.objects.update_or_create(host=host, defaults=defaults)
+    if created:
+        print(BColors.BOLD, 'add domain', host_info.host, BColors.END)
     host_speed = (int(scan_stats['end']) - int(scan_stats['start'])) * 100
     ip_speed = host_speed // int(scan_stats['totalhosts'])
     host_port_sum = 0
@@ -48,41 +55,41 @@ def save_result(host, result):
     host_info.save()
 
 
+async def host_scan(semaphore, host, exclude=None):
+    async with semaphore:
+        scanner = PortScanner(host, exclude=exclude)
+        scanner.scan()
+        print(host, 'begin scan', datetime.now())
+        while scanner.is_running:
+            await asyncio.sleep(0.5)
+        print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
+
+
+def get_host_domain(ip):
+    domain = ip[::-1].split('.', 1)[1][::-1] + '.*'
+    assert DOMAIN_FMT.search(domain.strip())
+    return domain
+
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--start', action='store_true')
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
 
     def handle(self, *args, **options):
-        start = 0
-        tasks = Queue(options['max_size'])
+        start = time.time()
+        loop = asyncio.get_event_loop()
+        semaphore = asyncio.Semaphore(options['max_size'])
         if options['start']:
-            while True:
-                if not tasks.full():
-                    hosts = HostInfo.objects.filter(is_deleted=False).values('host').all()[start:start + 1]
-                    start += 1
-                    if hosts:
-                        scanner = PortScanner(hosts[0]['host'])
-                        scanner.scan()
-                        tasks.put(scanner)
-                        print('add a host to queue', scanner._host)
-                    elif tasks.empty():
-                        print('all scan over')
-                        break
-                    else: # left in stacks
-                        scanner = tasks.get()
-                        if scanner.is_running:
-                            tasks.put(scanner)
-                        else:
-                            save_result(scanner._host, scanner.result)
-                        time.sleep(0.5)
+            tasks = []
+            for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
+                    '-port_sum').all():  # for ip scan
+                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host)))
+                if host_info.port_sum > 10:
+                    domain = get_host_domain(host_info.host)
+                    tasks.append(asyncio.ensure_future(host_scan(semaphore, domain, exclude=host_info.host)))
 
-                if tasks.full():
-                    while True:
-                        scanner = tasks.get()
-                        if scanner.is_running:
-                            tasks.put(scanner)
-                        else:
-                            save_result(scanner._host, scanner.result)
-                            break
-                        time.sleep(0.5)
+            for host_info in HostInfo.objects.filter(is_deleted=False, mode=1).all():  # for domain scan
+                tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host)))
+        loop.run_until_complete(asyncio.wait(tasks))
+        print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')

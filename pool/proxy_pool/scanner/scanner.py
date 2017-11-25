@@ -16,11 +16,11 @@ import psutil
 
 class BColors:
     HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
+    OK_BLUE = '\033[94m'
+    OK_GREEN = '\033[92m'
     WARNING = '\033[93m'
     FAIL = '\033[91m'
-    ENDC = '\033[0m'
+    END = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
@@ -61,10 +61,11 @@ class PortScanner:
         not_root = os.getuid() != 0
         global PORT_SCANNER_ROOT_WARNED
         if not PORT_SCANNER_ROOT_WARNED and not_root != 0:
-            print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.ENDC)
+            print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.END)
             PORT_SCANNER_ROOT_WARNED = True
         hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
-        exclude = ['--exclude', *self._exclude] if self._exclude else []
+        excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude, str) else [self._exclude]
+        exclude = ['--exclude', *excludes]
         commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
                                           '-p %s' % str(self._port) if self._port else '-F',
                                           '--host-timeout', str(self._host_timeout),
