@@ -76,17 +76,19 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--start', action='store_true')
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
+        parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=20, type=int, help='if ip port sum bigger than it, will scan it domain')
 
     def handle(self, *args, **options):
         start = time.time()
         loop = asyncio.get_event_loop()
         semaphore = asyncio.Semaphore(options['max_size'])
+        bigger = options['bigger']
         if options['start']:
             tasks = []
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
                 tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host)))
-                if host_info.port_sum > 10:
+                if host_info.port_sum > bigger:
                     domain = get_host_domain(host_info.host)
                     tasks.append(asyncio.ensure_future(host_scan(semaphore, domain, exclude=host_info.host)))
 
