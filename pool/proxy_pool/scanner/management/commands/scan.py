@@ -17,7 +17,6 @@ from scanner.scanner import PortScanner, BColors
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 
 
-
 def save_result(host, result, bigger):
     defaults = {'mode': 2, 'is_deleted': True} if DOMAIN_FMT.search(host.strip()) else None
     host_info, created = HostInfo.objects.get_or_create(host=host, defaults=defaults)
