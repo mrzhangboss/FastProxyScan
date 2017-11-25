@@ -63,6 +63,7 @@ async def host_scan(semaphore, host, exclude=None):
         while scanner.is_running:
             await asyncio.sleep(0.5)
         print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
+        save_result(host, scanner.result)
 
 
 def get_host_domain(ip):
