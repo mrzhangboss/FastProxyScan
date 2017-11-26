@@ -15,7 +15,7 @@ from aiohttp import ClientSession, TCPConnector
 from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyError, ClientResponseError
 from scanner.scanner import PortScanner
 
-BASE_TIMEOUT = 60
+BASE_TIMEOUT = 5
 FAST_SCAN_TIMEOUT = 10
 SEMAPHORE = asyncio.Semaphore(1000)
 
