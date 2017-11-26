@@ -14,11 +14,13 @@ from database.models import HostInfo
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--kuaidaili', action='store_true')
+        parser.add_argument('-m', '--max-page', action='store', dest='max_page', default=10, type=int,
+                            help='scan max page of proxy web')
 
     def handle(self, *args, **options):
         if options['kuaidaili']:
             insert = 0
-            for i in range(1, 100):
+            for i in range(1, options['max_page']):
                 hosts = re.findall('<td data-title="IP">(.*)</td>',
                                    requests.get('http://www.kuaidaili.com/free/inha/%d/' % i).text)
                 ins = 0
@@ -26,6 +28,6 @@ class Command(BaseCommand):
                     _, created = HostInfo.objects.update_or_create(host=host)
                     if created:
                         ins += 1
-                self.stdout.write(self.style.SUCCESS('insert %d' % ins))
+                self.stdout.write(self.style.SUCCESS('page %d insert %d' % (i, ins)))
                 insert += ins
             self.stdout.write(self.style.SUCCESS('total insert %d' % insert))
