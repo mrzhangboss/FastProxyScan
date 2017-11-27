@@ -10,6 +10,7 @@ import asyncio
 import time
 import requests
 from django.core.management import BaseCommand
+from django.db.models import Q
 from database.models import IPInfo, Proxy
 from checker.checker import check_proxy
 
@@ -17,7 +18,7 @@ from checker.checker import check_proxy
 async def check_one_port(port, check_ip_url, base_ip, skip=50):
     start = 0
     while True:
-        ip_group = Proxy.objects.filter(port=port, state=1).all()[start:start + skip]
+        ip_group = Proxy.objects.filter(port=port, state=1).filter(Q(is_checked=False)|Q(is_proxy=True)).all()[start:start + skip]
         if not ip_group:
             print('port %d complete' % port)
             break
@@ -27,7 +28,8 @@ async def check_one_port(port, check_ip_url, base_ip, skip=50):
         print('port %d get %d result' % (port, len(result)))
         for ip in result:
             ip_info = IPInfo.objects.get(ip=ip)
-            Proxy.objects.filter(ip=ip_info, port=port).update(**result[ip])
+            Proxy.objects.update_or_create(ip=ip_info, port=port, defaults=result[ip])
+            # Proxy.objects.filter(ip=ip_info, port=port).update(**result[ip])
 
 
 class Command(BaseCommand):
@@ -40,7 +42,7 @@ class Command(BaseCommand):
             start = time.time()
             url = options['check_ip_url']
             base_ip = requests.get(url).json()['REMOTE_ADDR']
-            ports = Proxy.objects.filter(state=1).values('port').distinct()
+            ports = Proxy.objects.filter(state=1).filter(Q(is_checked=False)|Q(is_proxy=True)).values('port').distinct()
             loop = asyncio.get_event_loop()
             tasks = []
             for p in ports:
@@ -48,5 +50,5 @@ class Command(BaseCommand):
                 tasks.append(task)
             loop.run_until_complete(asyncio.wait(tasks))
             seconds = time.time() - start
-            proxy_scan_sum = Proxy.objects.filter(state=1).count()
+            proxy_scan_sum = Proxy.objects.filter(state=1).filter(Q(is_checked=False)|Q(is_proxy=True)).count()
             print('Tasks over %d proxy cost %d s' % (proxy_scan_sum, seconds))

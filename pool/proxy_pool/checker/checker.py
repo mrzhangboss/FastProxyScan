@@ -71,7 +71,7 @@ async def request(url, method='head', proxy=None, timeout=BASE_TIMEOUT, verify_s
         start = time.time()
         rt = await _request(url, method, proxy, timeout, verify_ssl)
         speed = (time.time() - start) * 100
-        print(rt)
+        # print(rt)
     except asyncio.TimeoutError as e:
         logging.debug("{} :{}".format(str(type(e)), e))
         return HTTPError.Timeout
@@ -93,14 +93,20 @@ async def check_proxy_type(check_ip_url, proxy_url, base_ip, timeout=60):
         header, _ = res
         try:
             data = json.loads(header.decode())
+            via, x_for = data['HTTP_VIA'], data['HTTP_X_FORWARDED_FOR']
+        except KeyError as e:
+            # if return json but not like
+            # {'HTTP_VIA': '', 'HTTP_X_FORWARDED_FOR': '', 'REMOTE_ADDR': '111.111.1111.111'}
+            # return Default
+            return ProxyCheckedState.Default
         except (UnicodeDecodeError, json.JSONDecodeError) as e:
             return ProxyCheckedState.NeedAuthProxy
         else:
-            if data['HTTP_VIA'] and data['HTTP_X_FORWARDED_FOR'] and data['HTTP_X_FORWARDED_FOR'] == base_ip:
+            if via and x_for and x_for == base_ip:
                 return ProxyCheckedState.TransparentProxy
-            if data['HTTP_VIA'] and data['HTTP_X_FORWARDED_FOR'] and data['HTTP_X_FORWARDED_FOR'] != base_ip:
+            if via and x_for and x_for != base_ip:
                 return ProxyCheckedState.AnonymousProxy
-            if not data['HTTP_VIA'] and not data['HTTP_X_FORWARDED_FOR']:
+            if not via and not x_for:
                 return ProxyCheckedState.HighAnonymousProxy
             warnings.warn("%s: can't check type" % check_ip_url)
             return ProxyCheckedState.Default
@@ -139,7 +145,6 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                     continue
                 _, speed = res
                 result[ip]['speed'] = speed  # use http request speed
-                result[ip]['is_proxy'] = True
                 # Check https
 
                 res = await request(url='https://www.baidu.com', proxy=proxy_url)
@@ -154,14 +159,18 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                             result[ip]['protocol'] = ProxyProtocol.http_https
                     elif res == HTTPError.Timeout:
                         result[ip]['protocol'] = ProxyProtocol.http_https
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
+                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip,
+                                                                             FAST_SCAN_TIMEOUT)
                     else:
                         result[ip]['protocol'] = ProxyProtocol.http
-                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip, FAST_SCAN_TIMEOUT)
-
+                        result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip,
+                                                                             FAST_SCAN_TIMEOUT)
                 else:
                     result[ip]['protocol'] = ProxyProtocol.http_https
                     result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip)
+
+                # if not set real state , set is_proxy = False
+                result[ip]['is_proxy'] = result[ip]['checked_state'] != ProxyCheckedState.Default
     # pprint(result)
     return result
 
@@ -171,4 +180,3 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(check_proxy(['180.169.57.100:3389'],
                                         80, '182.96.183.104', 'http://115.159.146.115/ip'))
-
