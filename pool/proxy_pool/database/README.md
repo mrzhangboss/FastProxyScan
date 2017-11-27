@@ -27,7 +27,7 @@
  
 ### DB: Proxy
 
-- host Foreign Key(HostInfo)
+- ~~host Foreign Key(HostInfo)~~
 - ip Foreign Key(IPInfo)
 - port (int)
 - state (int) nmap scan state(open, closed, filtered, unfiltered, open|filtered, closed|filtered) 

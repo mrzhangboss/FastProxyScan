@@ -20,7 +20,7 @@ class IPInfoAdmin(admin.ModelAdmin):
 
 @admin.register(Proxy)
 class ProxyAdmin(admin.ModelAdmin):
-    readonly_fields = ['host', 'ip']
+    readonly_fields = ['ip']
     list_display = (
         '__str__', 'state', 'is_checked', 'is_proxy', 'checked_state', 'protocol', 'speed', 'insert_at',
         'update_at')

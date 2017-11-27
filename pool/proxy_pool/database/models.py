@@ -75,7 +75,6 @@ PROXY_PROTOCOL = [
 
 
 class Proxy(models.Model):
-    host = models.ForeignKey(HostInfo, on_delete=models.CASCADE, related_name='proxies')
     ip = models.ForeignKey(IPInfo, on_delete=models.CASCADE, related_name='proxies')
     port = models.IntegerField()
     state = models.IntegerField(default=0, choices=PROXY_STATE)
