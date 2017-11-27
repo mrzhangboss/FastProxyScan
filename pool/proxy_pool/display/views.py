@@ -12,7 +12,8 @@ proxy_check_state = dict(PROXY_CHECK_STATE)
 
 def get_latest_proxies(begin, end):
     proxies = []
-    for p in Proxy.objects.filter(is_proxy=True, state=1).order_by('-update_at').all()[begin:end]:
+    # filter need auth proxy
+    for p in Proxy.objects.filter(is_proxy=True, state=1).exclude(checked_state=4).order_by('-update_at').all()[begin:end]:
         proxy = {
             'ip': p.ip.ip,
             'port': p.port,
@@ -29,7 +30,7 @@ def get_latest_proxies(begin, end):
 # Create your views here.
 def index(request):
     page = int(request.GET.get('page', 0))
-    total = Proxy.objects.filter(is_proxy=True, state=1).count()
+    total = Proxy.objects.filter(is_proxy=True, state=1).exclude(checked_state=4).count()
     total_page = ceil(total / 10.0)
     pages = ({'page': x, 'text': x + 1} for x in range(max(0, page - 10), min(total_page, page + 10)))
 
