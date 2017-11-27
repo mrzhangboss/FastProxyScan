@@ -28,8 +28,8 @@ async def check_one_port(port, check_ip_url, base_ip, skip=50):
         print('port %d get %d result' % (port, len(result)))
         for ip in result:
             ip_info = IPInfo.objects.get(ip=ip)
-            Proxy.objects.update_or_create(ip=ip_info, port=port, defaults=result[ip])
-            # Proxy.objects.filter(ip=ip_info, port=port).update(**result[ip])
+            for p in Proxy.objects.filter(ip=ip_info, port=port).all():
+                Proxy.objects.update_or_create(ip=ip_info, port=port, host=p.host, defaults=result[ip])
 
 
 class Command(BaseCommand):
