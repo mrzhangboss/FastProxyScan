@@ -17,7 +17,6 @@ from scanner.scanner import PortScanner, BColors
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 
 
-
 def save_result(host, result, bigger):
     defaults = {'mode': 2, 'is_deleted': True} if DOMAIN_FMT.search(host.strip()) else None
     host_info, created = HostInfo.objects.get_or_create(host=host, defaults=defaults)
@@ -113,7 +112,8 @@ class Command(BaseCommand):
                         ips = get_domain_ips(host_info.host)
                         # if bigger than bigger // 2 , we add it to our host to scan
                         for ip in ips:
-                            tasks.append(asyncio.ensure_future(host_scan(semaphore, ip, bigger=bigger // 2, origin=domain)))
+                            tasks.append(
+                                asyncio.ensure_future(host_scan(semaphore, ip, bigger=bigger // 2, origin=domain)))
 
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=1).all():  # for domain scan
                 tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
