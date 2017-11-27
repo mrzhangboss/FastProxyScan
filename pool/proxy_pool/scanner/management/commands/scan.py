@@ -50,12 +50,12 @@ def save_result(host, result, bigger):
 
             for port in result['scan'][ip]['tcp']:
                 p = result['scan'][ip]['tcp'][port]
-                proxy, created = Proxy.objects.update_or_create(host=host_info,
-                                                                ip=ip_info,
-                                                                port=port,
-                                                                defaults={
-                                                                    'state': state[p['state']]
-                                                                })
+                proxy, created = Proxy.objects.update_or_create(
+                    ip=ip_info,
+                    port=port,
+                    defaults={
+                        'state': state[p['state']]
+                    })
                 if created:
                     print('insert proxy', ip, ':', port)
     host_info.port_sum = host_port_sum
