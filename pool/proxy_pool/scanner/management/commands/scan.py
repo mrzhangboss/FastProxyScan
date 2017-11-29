@@ -146,14 +146,14 @@ def pre_delete(day):
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('--start', action='store_true')
-        parser.add_argument('--scan', action='store_true')
+        parser.add_argument('--proxy', action='store_true')
+        parser.add_argument('--vps', action='store_true')
         parser.add_argument('--force-run', action='store_true', dest='force', help="force run domain scan")
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
-        parser.add_argument('-t', '--task-sum', action='store', dest='sum', default=5000, type=int)
+        parser.add_argument('-t', '--task-sum', action='store', dest='sum', default=1000, type=int)
         parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=15, type=int,
                             help='if ip port sum bigger than it, will scan it domain')
-        parser.add_argument('--expires', '-e', action='store', dest='expires', default=1, type=int,
+        parser.add_argument('--expires', '-e', action='store', dest='expires', default=2, type=int,
                             help='day of the checked host and proxy')
 
     def handle(self, *args, **options):
@@ -162,7 +162,7 @@ class Command(BaseCommand):
         semaphore = asyncio.Semaphore(options['max_size'])
         bigger = options['bigger']
         is_force_run = options['force']
-        if options['start']:
+        if options['proxy']:
             tasks = []
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
@@ -182,7 +182,7 @@ class Command(BaseCommand):
             loop.run_until_complete(asyncio.wait(tasks))
             print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')
 
-        if options['scan']:
+        if options['vps']:
             fn = 'delegated-apnic-latest.txt'
             url = 'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
             if not path.exists(fn):
