@@ -39,9 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'database',
     'display',
-    'crawler',
     'scanner',
-    'checker',
 ]
 
 MIDDLEWARE = [

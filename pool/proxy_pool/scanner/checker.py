@@ -13,7 +13,7 @@ import asyncio
 from pprint import pprint
 from aiohttp import ClientSession, TCPConnector
 from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyError, ClientResponseError
-from scanner.scanner import PortScanner
+from .scanner import PortScanner
 
 BASE_TIMEOUT = 5
 FAST_SCAN_TIMEOUT = 10

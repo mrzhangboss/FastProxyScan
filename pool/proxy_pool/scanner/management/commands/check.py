@@ -12,7 +12,7 @@ import requests
 from django.core.management import BaseCommand
 from django.db.models import Q
 from database.models import IPInfo, Proxy
-from checker.checker import check_proxy
+from scanner.checker import check_proxy
 
 
 async def check_one_port_part(ips, port, base_ip, check_ip_url):
