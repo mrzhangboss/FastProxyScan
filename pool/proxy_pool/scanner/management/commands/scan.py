@@ -8,7 +8,8 @@
 import re
 import asyncio
 import time
-from datetime import datetime
+from datetime import timedelta
+from django.utils.timezone import datetime
 from pprint import pprint
 from django.core.management import BaseCommand
 from database.models import HostInfo, IPInfo, Proxy, PROXY_STATE
@@ -86,6 +87,23 @@ def get_domain_ips(ip):
     return (y for y in ('%s.%d' % (domain, x) for x in range(256)) if y != ip)
 
 
+def pre_delete(day):
+    now = datetime.now()
+    expires_date = now - timedelta(days=day)
+    # delete host mode = 3 like 127.0.0.*
+    d_s = 0
+    for h in HostInfo.objects.filter(insert_at__lte=expires_date, mode=3):
+        d_s += 1
+        h.delete()
+    print('delete %d host' % d_s)
+
+    d_s = 0
+    # delete proxy
+    for p in Proxy.objects.filter(is_checked=True, is_proxy=False, insert_at__lte=expires_date).all():
+        d_s += 1
+        p.delete()
+    print('delete %d proxy' % d_s)
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--start', action='store_true')
@@ -93,6 +111,8 @@ class Command(BaseCommand):
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
         parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=15, type=int,
                             help='if ip port sum bigger than it, will scan it domain')
+        parser.add_argument('--expires', '-e', action='store', dest='expires', default=1, type=int,
+                            help='day of the checked host and proxy')
 
     def handle(self, *args, **options):
         start = time.time()
@@ -101,6 +121,7 @@ class Command(BaseCommand):
         bigger = options['bigger']
         is_force_run = options['force']
         if options['start']:
+            pre_delete(options['expires'])
             tasks = []
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
