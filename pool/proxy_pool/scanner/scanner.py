@@ -65,7 +65,8 @@ class PortScanner:
             PORT_SCANNER_ROOT_WARNED = True
         hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
         if self._exclude:
-            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude, str) else [self._exclude]
+            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude,
+                                                                                               str) else [self._exclude]
             exclude = ['--exclude', *excludes]
         else:
             exclude = []
@@ -73,6 +74,19 @@ class PortScanner:
                                           '-p %s' % str(self._port) if self._port else '-F',
                                           '--host-timeout', str(self._host_timeout),
                                           *exclude, *hosts]
+        self._process = psutil.Popen(commands, stdout=PIPE)
+
+    def scan_ip(self):
+        hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
+        if self._exclude:
+            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude,
+                                                                                               str) else [self._exclude]
+            exclude = ['--exclude', *excludes]
+        else:
+            exclude = []
+        commands = ['nmap', '-oX', '-', '-sP', '-T4',
+                    '--host-timeout', str(self._host_timeout),
+                    *exclude, *hosts]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
     @property

@@ -5,15 +5,20 @@
 @date: 2017/11/21
 
 """
+import os
 import re
+import random
 import asyncio
+import requests
 import time
 from datetime import timedelta
+from os import path
 from django.utils.timezone import datetime
 from pprint import pprint
 from django.core.management import BaseCommand
 from database.models import HostInfo, IPInfo, Proxy, PROXY_STATE
 from scanner.scanner import PortScanner, BColors
+from scanner.apnic_parse import get_ip_dress
 
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 
@@ -75,6 +80,40 @@ async def host_scan(semaphore, host, port=None, bigger=15, exclude=None, timeout
         save_result(origin if origin else host, scanner.result, bigger)
 
 
+async def ip_scan(semaphore, host, timeout=1, sleep_time=0.5):
+    async with semaphore:
+        scanner = PortScanner(host, host_timeout=timeout)
+        scanner.scan_ip()
+        print(host, 'begin scan host', datetime.now())
+        while scanner.is_running:
+            await asyncio.sleep(sleep_time)
+        print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
+        result = scanner.result
+        defaults = {'mode': 2, 'is_deleted': True}
+        host_info, created = HostInfo.objects.get_or_create(host=host, defaults=defaults)
+        if created:  # set deleted is True, not scan next time
+            print(BColors.BOLD, 'add domain', host_info.host, BColors.END)
+        if not result['scan']:  # delete host when it no port open
+            print('no vps scan', host)
+            return
+        scan_stats = result['nmap']['scanstats']
+        host_speed = (int(scan_stats['end']) - int(scan_stats['start'])) * 100
+        ip_speed = host_speed // int(scan_stats['totalhosts'])
+        host_port_sum = 0
+        for ip in result['scan']:
+            ip_port_sum = len(result['scan'][ip]['tcp']) if result['scan'][ip].get('tcp') else 0
+            host_port_sum += ip_port_sum
+            host_info, created = HostInfo.objects.get_or_create(host=ip, defaults={
+                'speed': ip_speed,
+                'port_sum': ip_port_sum
+            })
+            if created:
+                print('insert one host', ip)
+        host_info.port_sum = host_port_sum
+        host_info.speed = host_speed
+        host_info.save()
+
+
 def get_host_domain(ip):
     domain = ip[::-1].split('.', 1)[1][::-1] + '.*'
     domain = domain.strip()
@@ -104,11 +143,14 @@ def pre_delete(day):
         p.delete()
     print('delete %d proxy' % d_s)
 
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--start', action='store_true')
+        parser.add_argument('--scan', action='store_true')
         parser.add_argument('--force-run', action='store_true', dest='force', help="force run domain scan")
         parser.add_argument('-m', '--max-size', action='store', dest='max_size', default=20, type=int)
+        parser.add_argument('-t', '--task-sum', action='store', dest='sum', default=5000, type=int)
         parser.add_argument('-b', '--bigger', action='store', dest='bigger', default=15, type=int,
                             help='if ip port sum bigger than it, will scan it domain')
         parser.add_argument('--expires', '-e', action='store', dest='expires', default=1, type=int,
@@ -121,7 +163,6 @@ class Command(BaseCommand):
         bigger = options['bigger']
         is_force_run = options['force']
         if options['start']:
-            pre_delete(options['expires'])
             tasks = []
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=0).order_by(
                     '-port_sum').all():  # for ip scan
@@ -138,5 +179,27 @@ class Command(BaseCommand):
 
             for host_info in HostInfo.objects.filter(is_deleted=False, mode=1).all():  # for domain scan
                 tasks.append(asyncio.ensure_future(host_scan(semaphore, host_info.host, bigger=bigger)))
-        loop.run_until_complete(asyncio.wait(tasks))
-        print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')
+            loop.run_until_complete(asyncio.wait(tasks))
+            print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')
+
+        if options['scan']:
+            fn = 'delegated-apnic-latest.txt'
+            url = 'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
+            if not path.exists(fn):
+                with open(fn, 'wb') as f:
+                    f.write(requests.get(url).content)
+            pre_delete(options['expires'])
+            tasks = []
+            tasks_sum = options['sum']
+            ip_group = get_ip_dress(filename=fn)
+            random.shuffle(ip_group)
+            for domain in ip_group:
+                if not HostInfo.objects.filter(host=domain).exists() or is_force_run:
+                    tasks.append(asyncio.ensure_future(ip_scan(semaphore, domain, sleep_time=5)))
+                    if len(tasks) > tasks_sum:
+                        break
+            if not tasks:
+                print(BColors.WARNING, len(tasks), 'no host scan, please check expires args', datetime.now())
+                return
+            loop.run_until_complete(asyncio.wait(tasks))
+            print(BColors.OK_GREEN, len(tasks), 'tasks over', datetime.now(), 'cost ', time.time() - start, 's')
