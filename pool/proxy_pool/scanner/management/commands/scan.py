@@ -22,6 +22,7 @@ from scanner.scanner import PortScanner, BColors
 from scanner.apnic_parse import get_ip_dress
 
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
+PROXY_PORT_SUM = 15
 
 
 def save_proxy(host, result):
@@ -57,6 +58,8 @@ def save_proxy(host, result):
                 if created:
                     print('insert proxy', ip, ':', port)
     host_info.port_sum = host_port_sum
+    if host_port_sum > PROXY_PORT_SUM:
+        HostInfo.is_deleted = False
     host_info.speed = host_speed
     host_info.save()
 

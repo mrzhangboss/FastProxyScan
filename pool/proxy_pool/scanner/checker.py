@@ -16,7 +16,8 @@ from aiohttp.client_exceptions import ClientConnectionError, ClientHttpProxyErro
 from .scanner import PortScanner
 
 BASE_TIMEOUT = 5
-FAST_SCAN_TIMEOUT = 10
+PROXY_TIMEOUT = 15
+FAST_SCAN_TIMEOUT = 20
 SEMAPHORE = asyncio.Semaphore(1000)
 
 
@@ -115,19 +116,20 @@ async def check_proxy_type(check_ip_url, proxy_url, base_ip, timeout=60):
 async def check_proxy(ips, port, base_ip, check_ip_url):
     """
 
-    :param ips:
+    :param ips: [('127.0.0.1', True),] [(ip , is_proxy)]
     :param port:
     :param base_ip:
     :param check_ip_url: a web can return request header { REMOTE_ADDR, HTTP_VIA, HTTP_X_FORWARDED_FOR}
     :return:
     """
     result = {}
-    scanner = PortScanner(ips, port=port)
+    scanner = PortScanner([x[0] for x in ips], port=port)
     scanner.scan()
     while scanner.is_running:
         await asyncio.sleep(1)
     scan_result = scanner.result['scan']
-    for ip in ips:
+    for ip, is_proxy in ips:
+        timeout = PROXY_TIMEOUT if is_proxy else BASE_TIMEOUT
         result[ip] = dict(is_checked=True)
         ip_scan = scan_result.get(ip)
         if not ip_scan or (ip_scan and ip_scan.get('tcp') is None):
@@ -137,7 +139,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
             result[ip]['state'] = getattr(ProxyState, tcp[port]['state'].replace('|', '_'))
             if tcp[port]['state'] == 'open':
                 proxy_url = 'http://%s:%d' % (ip, port)
-                res = await request(url='http://www.baidu.com', proxy=proxy_url)
+                res = await request(url='http://www.baidu.com', proxy=proxy_url, timeout=timeout)
                 logging.debug('http response is %s' % str(res))
                 if isinstance(res, int):
                     # TODO: check http is block but https is OK
@@ -147,10 +149,11 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                 result[ip]['speed'] = speed  # use http request speed
                 # Check https
 
-                res = await request(url='https://www.baidu.com', proxy=proxy_url)
+                res = await request(url='https://www.baidu.com', proxy=proxy_url, timeout=timeout)
                 if isinstance(res, int):
                     if res == HTTPError.CertificateError:  # middle man attack proxy
-                        res = await request(url='https://www.baidu.com', proxy=proxy_url, verify_ssl=False)
+                        res = await request(url='https://www.baidu.com', proxy=proxy_url, verify_ssl=False,
+                                            timeout=timeout)
                         if not isinstance(res, int):
                             result[ip]['checked_state'] = ProxyCheckedState.MitmProxy
                             result[ip]['protocol'] = ProxyProtocol.http_https
@@ -167,7 +170,8 @@ async def check_proxy(ips, port, base_ip, check_ip_url):
                                                                              FAST_SCAN_TIMEOUT)
                 else:
                     result[ip]['protocol'] = ProxyProtocol.http_https
-                    result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip)
+                    result[ip]['checked_state'] = await check_proxy_type(check_ip_url, proxy_url, base_ip,
+                                                                         FAST_SCAN_TIMEOUT)
 
                 # if not set real state , set is_proxy = False
                 result[ip]['is_proxy'] = result[ip]['checked_state'] != ProxyCheckedState.Default

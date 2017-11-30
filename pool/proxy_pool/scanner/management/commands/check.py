@@ -29,7 +29,7 @@ async def check_one_port(port, check_ip_url, base_ip, skip=50):
     total = query.count()
     for i in range(0, total, skip):
         ip_group = query.all()[i:i + skip]
-        ips = [x.ip.ip for x in ip_group]
+        ips = [(x.ip.ip, x.is_proxy) for x in ip_group]
         tasks.append(asyncio.ensure_future(check_one_port_part(ips, port, base_ip, check_ip_url)))
     await asyncio.gather(*tasks)
     print('port', port, 'finished')
