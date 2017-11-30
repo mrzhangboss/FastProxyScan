@@ -40,7 +40,6 @@ def save_proxy(host, result):
     host_port_sum = 0
     for ip in result['scan']:
         ip_port_sum = len(result['scan'][ip]['tcp']) if result['scan'][ip].get('tcp') else 0
-        host_port_sum += ip_port_sum
         ip_info, created = IPInfo.objects.update_or_create(ip=ip, defaults={
             'speed': ip_speed,
             'port_sum': ip_port_sum
@@ -50,6 +49,8 @@ def save_proxy(host, result):
         if ip_port_sum > 0:
             for port in result['scan'][ip]['tcp']:
                 p = result['scan'][ip]['tcp'][port]
+                if p['state'] == 'open':
+                    host_port_sum += 1
                 proxy, created = Proxy.objects.update_or_create(
                     ip=ip_info,
                     port=port,
