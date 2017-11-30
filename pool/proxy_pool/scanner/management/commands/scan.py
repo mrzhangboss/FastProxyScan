@@ -149,7 +149,7 @@ def pre_delete(day):
     # delete proxy
     proxy_query = Proxy.objects.filter(is_checked=True, is_proxy=False, insert_at__lte=expires_date)
     print('delete %d proxy' % proxy_query.count())
-    proxy_query.delete()
+    proxy_query.update(is_checked=True)
 
 
 class Command(BaseCommand):
