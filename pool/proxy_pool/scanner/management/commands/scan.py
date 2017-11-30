@@ -23,6 +23,7 @@ from scanner.apnic_parse import get_ip_dress
 
 DOMAIN_FMT = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\*$')
 PROXY_PORT_SUM = 15
+BASE_TOTAL_TIMEOUT = 120
 
 
 def save_proxy(host, result):
@@ -64,13 +65,19 @@ def save_proxy(host, result):
     host_info.save()
 
 
-async def port_scan(semaphore, host, port=None, timeout=60, sleep_time=0.5):
+async def port_scan(semaphore, host, port=None, timeout=60, sleep_time=0.5, total_timeout=BASE_TOTAL_TIMEOUT):
     async with semaphore:
         scanner = PortScanner(host, port=port, host_timeout=timeout)
         scanner.scan()
         print(host, 'begin scan', datetime.now())
+        wait_time = 0
         while scanner.is_running:
             await asyncio.sleep(sleep_time)
+            wait_time += sleep_time
+            if wait_time > total_timeout:
+                scanner.kill()
+                print(BColors.WARNING, 'port scan overtime', wait_time, datetime.now())
+                return
         print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
         save_proxy(host, scanner.result)
 
@@ -101,13 +108,19 @@ def save_host(host, result):
     host_info.save()
 
 
-async def ip_scan(semaphore, host, timeout=1, sleep_time=0.5):
+async def ip_scan(semaphore, host, timeout=1, sleep_time=0.5, total_timeout=BASE_TOTAL_TIMEOUT):
     async with semaphore:
         scanner = PortScanner(host, host_timeout=timeout)
         scanner.scan_ip()
         print(host, 'begin scan host', datetime.now())
+        wait_time = 0
         while scanner.is_running:
             await asyncio.sleep(sleep_time)
+            wait_time += sleep_time
+            if wait_time > total_timeout:
+                scanner.kill()
+                print(BColors.WARNING, host, 'run over time', wait_time, datetime.now(), BColors.END)
+                return
         print(BColors.OK_GREEN, host, 'scan over', datetime.now(), BColors.END)
         save_host(host, scanner.result)
 

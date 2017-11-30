@@ -113,20 +113,27 @@ async def check_proxy_type(check_ip_url, proxy_url, base_ip, timeout=60):
             return ProxyCheckedState.Default
 
 
-async def check_proxy(ips, port, base_ip, check_ip_url):
+async def check_proxy(ips, port, base_ip, check_ip_url, total_timeout=60):
     """
 
     :param ips: [('127.0.0.1', True),] [(ip , is_proxy)]
     :param port:
     :param base_ip:
     :param check_ip_url: a web can return request header { REMOTE_ADDR, HTTP_VIA, HTTP_X_FORWARDED_FOR}
+    :param total_timeout
     :return:
     """
     result = {}
     scanner = PortScanner([x[0] for x in ips], port=port)
     scanner.scan()
+    wait_time = 0
     while scanner.is_running:
         await asyncio.sleep(1)
+        wait_time += 1
+        if wait_time > total_timeout:
+            scanner.kill()
+            print('scanner overtime')
+            return
     scan_result = scanner.result['scan']
     for ip, is_proxy in ips:
         timeout = PROXY_TIMEOUT if is_proxy else BASE_TIMEOUT

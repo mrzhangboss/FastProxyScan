@@ -57,37 +57,43 @@ class PortScanner:
     def is_running(self):
         return self.check_finished()
 
+    @property
+    def exclude(self):
+        if self._exclude:
+            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude,
+                                                                                               str) else [self._exclude]
+            return ['--exclude', *excludes]
+        else:
+            return []
+
+    @property
+    def hosts(self):
+        return self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
+
     def scan(self):
         not_root = os.getuid() != 0
         global PORT_SCANNER_ROOT_WARNED
         if not PORT_SCANNER_ROOT_WARNED and not_root != 0:
             print(BColors.FAIL + "You are not root.Please check if you have sudo premission" + BColors.END)
             PORT_SCANNER_ROOT_WARNED = True
-        hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
-        if self._exclude:
-            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude,
-                                                                                               str) else [self._exclude]
-            exclude = ['--exclude', *excludes]
-        else:
-            exclude = []
         commands = ['sudo'] * not_root + ['nmap', '-oX', '-', '-sS', '-T4',
                                           '-p %s' % str(self._port) if self._port else '-F',
                                           '--host-timeout', str(self._host_timeout),
-                                          *exclude, *hosts]
+                                          *self.exclude, *self.hosts]
         self._process = psutil.Popen(commands, stdout=PIPE)
 
     def scan_ip(self):
-        hosts = self._host if isinstance(self._host, Iterable) and not isinstance(self._host, str) else [self._host]
-        if self._exclude:
-            excludes = self._exclude if isinstance(self._exclude, Iterable) and not isinstance(self._exclude,
-                                                                                               str) else [self._exclude]
-            exclude = ['--exclude', *excludes]
-        else:
-            exclude = []
         commands = ['nmap', '-oX', '-', '-sP', '-T4',
                     '--host-timeout', str(self._host_timeout),
-                    *exclude, *hosts]
+                    *self.exclude, *self.hosts]
         self._process = psutil.Popen(commands, stdout=PIPE)
+
+    def kill(self):
+        if self._process:
+            self._process.terminate()
+            self._process.kill()
+            self._process.wait()
+            assert self._process.is_running() == False
 
     @property
     def result(self):
