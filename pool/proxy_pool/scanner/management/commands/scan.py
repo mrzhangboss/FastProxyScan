@@ -59,7 +59,7 @@ def save_proxy(host, result):
                     print('insert proxy', ip, ':', port)
     host_info.port_sum = host_port_sum
     if host_port_sum > PROXY_PORT_SUM:
-        HostInfo.is_deleted = False
+        host_info.is_deleted = False
     host_info.speed = host_speed
     host_info.save()
 
