@@ -146,7 +146,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url, total_timeout=60):
             result[ip]['state'] = getattr(ProxyState, tcp[port]['state'].replace('|', '_'))
             if tcp[port]['state'] == 'open':
                 proxy_url = 'http://%s:%d' % (ip, port)
-                res = await request(url='http://www.baidu.com', proxy=proxy_url, timeout=timeout)
+                res = await request(url='http://www.baidu.com', proxy=proxy_url, timeout=timeout, method='get')
                 logging.debug('http response is %s' % str(res))
                 if isinstance(res, int):
                     # TODO: check http is block but https is OK
