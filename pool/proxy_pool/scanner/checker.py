@@ -181,7 +181,7 @@ async def check_proxy(ips, port, base_ip, check_ip_url, total_timeout=60):
                                                                          FAST_SCAN_TIMEOUT)
 
                 # if not set real state , set is_proxy = False
-                result[ip]['is_proxy'] = result[ip]['checked_state'] != ProxyCheckedState.Default
+                result[ip]['is_proxy'] = result[ip]['checked_state'] not in (ProxyCheckedState.Default, ProxyCheckedState.MitmProxy)
     # pprint(result)
     return result
 
